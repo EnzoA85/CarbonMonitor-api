@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: capcarbon-postgres
+    environment:
+      POSTGRES_DB: capcarbon
+      POSTGRES_USER: capcarbon
+      POSTGRES_PASSWORD: capcarbon
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U capcarbon"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  capcarbon-api:
+    build: ./capcarbon-api
+    container_name: capcarbon-api
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  capcarbon-web:
+    build: ./capcarbon-web
+    container_name: capcarbon-web
+    ports:
+      - "4200:80"
+    depends_on:
+      - capcarbon-api
+
+volumes:
+  postgres_data:
