@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.capgemini.capcarbon.dto.request.SiteHistoryRequest;
 import com.capgemini.capcarbon.dto.request.SiteMaterialRequest;
@@ -73,6 +74,7 @@ public class SiteService {
         siteRepository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public List<SiteResponse> findAll() {
         return siteRepository.findAll().stream().map(this::mapToSiteResponse).collect(Collectors.toList());
     }
