@@ -63,6 +63,7 @@ For Docker, use profile `docker` (see `application-docker.yml`).
 | DELETE | `/sites/{id}` | Delete site |
 | GET | `/sites/{id}/materials` | Get site materials |
 | POST | `/sites/{id}/materials` | Add material to site |
+| DELETE | `/sites/{id}/materials/{siteMaterialId}` | Remove material from site |
 | POST | `/sites/{id}/calculate` | Run carbon calculation |
 | GET | `/sites/{id}/report` | Get carbon report |
 | GET | `/materials` | List materials (Base Carbone®) |

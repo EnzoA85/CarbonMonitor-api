@@ -107,8 +107,12 @@ public class SiteService {
         return mapToSiteMaterialResponse(siteMaterialRepository.save(sm));
     }
 
-    public void removeSiteMaterial(Long siteId, Long materialId) {
-        siteMaterialRepository.deleteBySiteIdAndMaterialId(siteId, materialId);
+    @Transactional
+    public void removeSiteMaterial(Long siteId, Long siteMaterialId) {
+        int deleted = siteMaterialRepository.deleteByIdAndSiteId(siteMaterialId, siteId);
+        if (deleted == 0) {
+            throw new RuntimeException("Site material not found or does not belong to this site");
+        }
     }
 
     // History Methods

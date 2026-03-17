@@ -71,11 +71,11 @@ public class SiteController {
         return ResponseEntity.ok(siteService.addSiteMaterial(id, request));
     }
 
-    @DeleteMapping("/{siteId}/materials/{materialId}")
+    @DeleteMapping("/{siteId}/materials/{siteMaterialId}")
     public ResponseEntity<Void> removeSiteMaterial(
             @PathVariable Long siteId, 
-            @PathVariable Long materialId) {
-        siteService.removeSiteMaterial(siteId, materialId);
+            @PathVariable Long siteMaterialId) {
+        siteService.removeSiteMaterial(siteId, siteMaterialId);
         return ResponseEntity.noContent().build();
     }
 
