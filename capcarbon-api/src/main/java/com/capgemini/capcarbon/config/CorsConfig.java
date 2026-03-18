@@ -27,7 +27,8 @@ public class CorsConfig {
                 "http://localhost:80",
                 "http://localhost:8081",
                 "http://localhost:19006",
-                "https://*.azurewebsites.net"
+                "https://*.azurewebsites.net",
+                "https://carbonfront-bqbgeqatabdfhtbf.spaincentral-01.azurewebsites.net"
         ));
 
         // Méthodes HTTP autorisées
