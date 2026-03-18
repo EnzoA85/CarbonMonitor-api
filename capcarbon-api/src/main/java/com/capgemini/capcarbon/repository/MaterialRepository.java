@@ -7,4 +7,5 @@ import com.capgemini.capcarbon.entity.Material;
 
 @Repository
 public interface MaterialRepository extends JpaRepository<Material, Long> {
+    boolean existsByNameIgnoreCase(String name);
 }

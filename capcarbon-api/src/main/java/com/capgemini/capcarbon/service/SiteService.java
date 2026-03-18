@@ -4,9 +4,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.capgemini.capcarbon.dto.request.SiteHistoryRequest;
 import com.capgemini.capcarbon.dto.request.SiteMaterialRequest;
@@ -41,9 +43,28 @@ public class SiteService {
     private final UserRepository userRepository;
     private final CarbonResultRepository carbonResultRepository;
 
+    private String currentUserEmail() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+        return auth.getName();
+    }
+
+    private User currentUserOrThrow() {
+        String email = currentUserEmail();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+    }
+
+    private Site getOwnedSiteOrThrow(Long siteId) {
+        String email = currentUserEmail();
+        return siteRepository.findByIdAndCreatedByEmail(siteId, email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Site not found"));
+    }
+
     public SiteResponse createSite(SiteRequest request) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User currentUser = userRepository.findByEmail(email).orElse(null);
+        User currentUser = currentUserOrThrow();
 
         Site site = Site.builder()
                 .name(request.getName())
@@ -59,7 +80,7 @@ public class SiteService {
     }
 
     public SiteResponse updateSite(Long id, SiteRequest request) {
-        Site site = siteRepository.findById(id).orElseThrow(() -> new RuntimeException("Site not found"));
+        Site site = getOwnedSiteOrThrow(id);
         site.setName(request.getName());
         site.setLocation(request.getLocation());
         site.setSurface(request.getSurface());
@@ -70,30 +91,36 @@ public class SiteService {
     }
 
     public void deleteSite(Long id) {
-        if (!siteRepository.existsById(id)) throw new RuntimeException("Site not found");
+        String email = currentUserEmail();
+        if (!siteRepository.existsByIdAndCreatedByEmail(id, email)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Site not found");
+        }
         siteRepository.deleteById(id);
     }
 
     @Transactional(readOnly = true)
     public List<SiteResponse> findAll() {
-        return siteRepository.findAll().stream().map(this::mapToSiteResponse).collect(Collectors.toList());
+        String email = currentUserEmail();
+        return siteRepository.findByCreatedByEmailOrderByCreatedAtDesc(email).stream()
+                .map(this::mapToSiteResponse)
+                .collect(Collectors.toList());
     }
 
     public SiteResponse findById(Long id) {
-        return siteRepository.findById(id).map(this::mapToSiteResponse)
-                .orElseThrow(() -> new RuntimeException("Site not found"));
+        return mapToSiteResponse(getOwnedSiteOrThrow(id));
     }
 
     // Material Methods
     public List<SiteMaterialResponse> getSiteMaterials(Long siteId) {
+        getOwnedSiteOrThrow(siteId);
         return siteMaterialRepository.findBySiteId(siteId).stream()
                 .map(this::mapToSiteMaterialResponse).collect(Collectors.toList());
     }
 
     public SiteMaterialResponse addSiteMaterial(Long siteId, SiteMaterialRequest request) {
-        Site site = siteRepository.findById(siteId).orElseThrow(() -> new RuntimeException("Site not found"));
+        Site site = getOwnedSiteOrThrow(siteId);
         Material material = materialRepository.findById(request.getMaterialId())
-                .orElseThrow(() -> new RuntimeException("Material not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Material not found"));
 
         double calculatedEmission = request.getQuantity() * material.getEmissionFactor();
 
@@ -109,20 +136,22 @@ public class SiteService {
 
     @Transactional
     public void removeSiteMaterial(Long siteId, Long siteMaterialId) {
+        getOwnedSiteOrThrow(siteId);
         int deleted = siteMaterialRepository.deleteByIdAndSiteId(siteMaterialId, siteId);
         if (deleted == 0) {
-            throw new RuntimeException("Site material not found or does not belong to this site");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Site material not found");
         }
     }
 
     // History Methods
     public List<SiteHistoryResponse> getSiteHistory(Long siteId) {
+        getOwnedSiteOrThrow(siteId);
         return siteHistoryRepository.findBySiteIdOrderByYearAsc(siteId).stream()
                 .map(this::mapToSiteHistoryResponse).collect(Collectors.toList());
     }
 
     public SiteHistoryResponse addSiteHistory(Long siteId, SiteHistoryRequest request) {
-        Site site = siteRepository.findById(siteId).orElseThrow(() -> new RuntimeException("Site not found"));
+        Site site = getOwnedSiteOrThrow(siteId);
         SiteHistory history = SiteHistory.builder()
                 .site(site)
                 .year(request.getYear())
@@ -135,7 +164,7 @@ public class SiteService {
 
     // Calcul
     public CarbonResultResponse calculateEmission(Long siteId) {
-        Site site = siteRepository.findById(siteId).orElseThrow(() -> new RuntimeException("Site not found"));
+        Site site = getOwnedSiteOrThrow(siteId);
         
         // Sum material emissions for construction
         List<SiteMaterial> materials = siteMaterialRepository.findBySiteId(siteId);
