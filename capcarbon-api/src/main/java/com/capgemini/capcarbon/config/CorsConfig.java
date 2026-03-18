@@ -20,12 +20,14 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Origines autorisées : Angular dev, Angular Docker, Expo Web dev
-        config.setAllowedOrigins(List.of(
-                "http://localhost:4200",   // Angular (dev local)
-                "http://localhost:80",     // Angular (Docker)
-                "http://localhost:8081",   // Expo Web (dev)
-                "http://localhost:19006"   // Expo Web (autre port)
+        // Origines autorisées : Angular dev, Angular Docker, Expo Web dev, prod Azure
+        // setAllowedOriginPatterns permet *.azurewebsites.net avec allowCredentials
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:4200",
+                "http://localhost:80",
+                "http://localhost:8081",
+                "http://localhost:19006",
+                "https://*.azurewebsites.net"
         ));
 
         // Méthodes HTTP autorisées
